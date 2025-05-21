@@ -8,6 +8,8 @@ import { omit } from 'lodash'
 import { tokenTypes } from '~/enums/token.enum'
 dotenv.config()
 
+type StringValue = `${number}${'s' | 'm' | 'h' | 'd'}`
+
 const login = async (loginData: Login) => {
   try {
     const { email, password } = loginData
@@ -38,8 +40,8 @@ const login = async (loginData: Login) => {
       user: existUser._id
     })
 
-    const accessToken = await signToken(payloadToken, process.env.EXPIRE_ACCESS_TOKEN as string)
-    const refreshToken = await signToken(payloadToken, process.env.EXPIRE_REFRESH_TOKEN as string)
+    const accessToken = await signToken(payloadToken, process.env.EXPIRE_ACCESS_TOKEN as StringValue)
+    const refreshToken = await signToken(payloadToken, process.env.EXPIRE_REFRESH_TOKEN as StringValue)
     await new TokenModel({
       token: refreshToken,
       user: existUser._id,
@@ -78,7 +80,7 @@ const refreshToken = async (refreshToken: string) => {
         email: user.email,
         role: user.role
       }
-      const newAccessToken = await signToken(payload, process.env.EXPIRE_ACCESS_TOKEN as string)
+      const newAccessToken = await signToken(payload, process.env.EXPIRE_ACCESS_TOKEN as StringValue)
       const response = {
         message: 'Refresh token thành công',
         data: {
