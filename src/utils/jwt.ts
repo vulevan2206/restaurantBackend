@@ -5,11 +5,13 @@ import { STATUS } from '~/constants/httpStatus'
 import { Request } from 'express'
 dotenv.config()
 
-export const signToken = (payload: string | object | Buffer, token_life: number | string) => {
+type StringValue = `${number}${'s' | 'm' | 'h' | 'd'}`
+
+export const signToken = (payload: string | object | Buffer, token_life: number | StringValue) => {
   return new Promise((resolve, reject) => {
     jwt.sign(payload, process.env.SECRET_KEY as string, { expiresIn: token_life }, (error, token) => {
       if (error) reject(error)
-      resolve(token)
+      else resolve(token)
     })
   })
 }
