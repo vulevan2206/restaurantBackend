@@ -2,7 +2,9 @@ import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import { server } from '~/app'
 
-dotenv.config()
+// Load environment variables tùy theo NODE_ENV
+const env = process.env.NODE_ENV || 'development'
+dotenv.config({ path: env === 'production' ? '.env.production' : '.env' })
 
 const port = process.env.PORT ?? 8080
 const host = process.env.HOST || '0.0.0.0'
@@ -24,18 +26,16 @@ const host = process.env.HOST || '0.0.0.0'
       process.exit(1)
     }
 
-    // MongoDB connection configuration
+    // MongoDB connection options
     const mongooseOptions: mongoose.ConnectOptions = {
       retryWrites: true,
       w: 'majority',
       appName: 'restaurant-backend'
     }
 
-    // Connect to MongoDB
     await mongoose.connect(mongoUri, mongooseOptions)
     console.log(connected('Connection to MongoDB successful!'))
 
-    // MongoDB event listeners
     mongoose.connection.on('connected', () => {
       console.log(connected('Mongoose default connection is open to MongoDB Atlas'))
     })
@@ -48,15 +48,13 @@ const host = process.env.HOST || '0.0.0.0'
       console.log(disconnected('Mongoose default connection disconnected'))
     })
 
-    // Start server
     server.listen(Number(port), host, () => {
       console.log(chalk.green(`Server is running on http://${host}:${port}`))
       console.log(
-        warning(`CORS configured for: ${process.env.CORS_ORIGIN || 'https://restaurantbackend-yzc4.onrender.com'}`)
+        warning(`CORS configured for: ${process.env.CORS_ORIGIN || 'https://restaurantfrontend-a8z7.onrender.com'}`)
       )
     })
 
-    // Handle shutdown gracefully
     process.on('SIGINT', async () => {
       await mongoose.connection.close()
       console.log(disconnected('Mongoose default connection disconnected through app termination'))

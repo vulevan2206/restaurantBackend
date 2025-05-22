@@ -7,15 +7,16 @@ import { Server } from 'socket.io'
 
 const app: Application = express()
 const server = createServer(app)
+
 const io = new Server(server, {
   cors: {
-    origin: 'https://restaurantfrontend-a8z7.onrender.com',
+    origin: process.env.CORS_ORIGIN || 'https://restaurantfrontend-a8z7.onrender.com',
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type']
   }
 })
 
-app.use(cors())
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'https://restaurantfrontend-a8z7.onrender.com' }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
