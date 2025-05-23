@@ -1,13 +1,13 @@
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
-import { server } from '~/app'
 
 // Load environment variables tùy theo NODE_ENV
 const env = process.env.NODE_ENV || 'development'
 dotenv.config({ path: env === 'production' ? '.env.production' : '.env' })
+import { server } from '~/app'
 
 const port = process.env.PORT ?? 8080
-const host = process.env.HOST || '0.0.0.0'
+const isProduction = env === 'production'
 
 ;(async () => {
   try {
@@ -48,11 +48,10 @@ const host = process.env.HOST || '0.0.0.0'
       console.log(disconnected('Mongoose default connection disconnected'))
     })
 
-    server.listen(Number(port), host, () => {
-      console.log(chalk.green(`Server is running on http://${host}:${port}`))
-      console.log(
-        warning(`CORS configured for: ${process.env.CORS_ORIGIN || 'https://restaurantfrontend-a8z7.onrender.com'}`)
-      )
+    server.listen(Number(port), () => {
+      const serverUrl = isProduction ? process.env.PRODUCTION_URL : `http://localhost:${port}`
+      console.log(chalk.green(`Server is running on ${serverUrl}`))
+      console.log(warning(`CORS configured for: ${process.env.CORS_ORIGIN}`))
     })
 
     process.on('SIGINT', async () => {

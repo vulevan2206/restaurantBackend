@@ -10,13 +10,13 @@ const server = createServer(app)
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'https://restaurantfrontend-a8z7.onrender.com',
+    origin: process.env.CORS_ORIGIN,
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type']
   }
 })
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'https://restaurantfrontend-a8z7.onrender.com' }))
+app.use(cors({ origin: process.env.CORS_ORIGIN }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
