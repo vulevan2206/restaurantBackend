@@ -12,7 +12,7 @@ const createUser = async (userData: UserRequest) => {
 
     if (existUser) {
       throw new ErrorHandler(STATUS.NOT_FOUND, {
-        message: 'User đã tồn tại'
+        message: 'Email đã tồn tại'
       })
     }
 
@@ -24,7 +24,7 @@ const createUser = async (userData: UserRequest) => {
     })
 
     const response = {
-      message: 'Tạo user thành công',
+      message: 'Tạo người dùng thành công',
       data: omit(newUser, ['password'])
     }
 
@@ -38,7 +38,7 @@ const createUser = async (userData: UserRequest) => {
 const getAllUser = async (query: UserQuery) => {
   try {
     // eslint-disable-next-line prefer-const
-    let { page = 1, limit = 6, email } = query
+    let { page = 1, limit = 8, email } = query
     page = Number(page)
     limit = Number(limit)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,7 +52,7 @@ const getAllUser = async (query: UserQuery) => {
     const totalUsers = await UserModel.find(condition).countDocuments().lean()
     const page_size = Math.ceil(totalUsers / limit) || 1
     const response = {
-      message: 'Lấy tất cả nhân viên thành công',
+      message: 'Lấy tất cả người dùng thành công',
       data: {
         content: users,
         pagination: {
@@ -74,7 +74,7 @@ const updateUser = async (id: string, body: UserRequest) => {
   try {
     const existUser = await UserModel.findById(id).lean()
     if (!existUser) {
-      throw new ErrorHandler(STATUS.NOT_FOUND, 'User không tồn tại')
+      throw new ErrorHandler(STATUS.NOT_FOUND, 'Người dùng không tồn tại')
     }
     let newBody = { ...body }
     if (body.cloudinaryUrl) {
@@ -166,12 +166,12 @@ const updateMyPassword = async (email: string, body: ChangePassword) => {
     const match = compareValue(oldPassword, existUser.password)
     if (!match) {
       throw new ErrorHandler(STATUS.UNPROCESSABLE_ENTITY, {
-        oldPassword: 'Password không chính xác'
+        oldPassword: 'Mật khẩu không chính xác'
       })
     }
     if (newPassword !== confirmPassword) {
       throw new ErrorHandler(STATUS.UNPROCESSABLE_ENTITY, {
-        confirmPassword: 'Password không khớp'
+        confirmPassword: 'Mật khẩu không khớp'
       })
     }
     const encryptPassword = bcrypt.hashSync(newPassword, 12)

@@ -28,7 +28,7 @@ const login = async (loginData: Login) => {
     const match = compareValue(password, existUser.password)
     if (!match) {
       throw new ErrorHandler(STATUS.UNPROCESSABLE_ENTITY, {
-        password: 'Password không chính xác'
+        password: 'Mật khẩu không chính xác'
       })
     }
     const payloadToken: PayloadToken = {

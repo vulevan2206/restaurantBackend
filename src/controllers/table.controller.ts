@@ -27,7 +27,6 @@ export const checkAvailableTable = async (req: Request, res: Response) => {
 export const getAllTables = async (req: Request, res: Response) => {
   try {
     const query: TableQuery = req.query as unknown as TableQuery
-    console.log(req.query)
     const result = await tableService.getAllTables(query)
     return responseSuccess(res, result)
   } catch (error) {

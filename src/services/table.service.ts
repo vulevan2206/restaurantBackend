@@ -84,8 +84,6 @@ const getAllTables = async (query: TableQuery) => {
     page = Number(page)
     limit = Number(limit)
 
-    console.log(table_number)
-
     const condition: any = {}
     if (table_number) {
       condition.table_number = Number(table_number)
