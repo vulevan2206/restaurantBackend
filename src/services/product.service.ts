@@ -42,9 +42,13 @@ const updateProduct = async (id: string, body: ProductRequest) => {
         image: body.cloudinaryUrl
       }
     }
-    const updatedProduct = await ProductModel.findByIdAndUpdate(id, {
-      $set: newBody
-    })
+    const updatedProduct = await ProductModel.findByIdAndUpdate(
+      id,
+      {
+        $set: newBody
+      },
+      { new: true }
+    )
     if (body.status === productStatus.UNAVAILABLE) {
       await OrderModel.updateMany(
         {
