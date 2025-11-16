@@ -3,7 +3,7 @@ import { pick } from 'lodash'
 import { io, userSockets } from '~/app'
 import { STATUS } from '~/constants/httpStatus'
 import { orderStatus } from '~/enums/orderStatus.enum'
-import { OrderModel, ProductModel, TableModel } from '~/models'
+import { OrderModel, ProductModel, TableModel, TableSessionModel } from '~/models'
 import { ErrorHandler } from '~/utils/response'
 
 export const orderStatusName = {
@@ -399,12 +399,38 @@ const updateOrder = async (order_id: string, query: OrderUpdateQuery) => {
       await ProductModel.findByIdAndUpdate(String(newProd?._id), {
         $inc: { sold: (updatedData as unknown as { buy_count: number }).buy_count }
       })
+
+      // Auto unlock table session when order is paid
+      const tableNumber = existOrder.table_number
+      if (tableNumber) {
+        await TableSessionModel.findOneAndUpdate(
+          {
+            table_number: tableNumber,
+            is_active: true
+          },
+          {
+            is_active: false,
+            logged_out_at: new Date()
+          }
+        )
+        console.log(`Auto unlocked table ${tableNumber} session after payment`)
+      }
     } else {
       if ((existOrder as unknown as { status: string }).status === orderStatus.PAID) {
         await ProductModel.findByIdAndUpdate(String(newProd?._id), {
           $inc: { sold: -1 * (updatedData as unknown as { buy_count: number }).buy_count }
         })
       }
+    }
+
+    // Emit socket event for kitchen display to update
+    if (status && existOrder.status !== status) {
+      io.emit('orderStatusUpdated', {
+        message: `Đơn hàng bàn ${existOrder.table_number} đã cập nhật trạng thái`,
+        order_id,
+        old_status: existOrder.status,
+        new_status: status
+      })
     }
 
     const response = {

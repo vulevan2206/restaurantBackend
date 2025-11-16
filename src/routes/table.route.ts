@@ -5,7 +5,11 @@ import {
   deleteTable,
   getAllTables,
   leaveTable,
-  updateTable
+  updateTable,
+  checkTableSession,
+  createTableSession,
+  unlockTableSession,
+  updateSessionActivity
 } from '~/controllers/table.controller'
 import authMiddleware from '~/middlewares/auth.middleware'
 import { wrapAsync } from '~/utils/response'
@@ -18,5 +22,11 @@ router.get('/', authMiddleware.verifyAccessToken, authMiddleware.verifyAdmin, wr
 router.post('/leave', wrapAsync(leaveTable))
 router.patch('/:id', authMiddleware.verifyAccessToken, authMiddleware.verifyAdmin, wrapAsync(updateTable))
 router.delete('/:id', authMiddleware.verifyAccessToken, authMiddleware.verifyAdmin, wrapAsync(deleteTable))
+
+// Table session management
+router.get('/session/check', wrapAsync(checkTableSession))
+router.post('/session/create', wrapAsync(createTableSession))
+router.post('/session/unlock', authMiddleware.verifyAccessToken, wrapAsync(unlockTableSession))
+router.post('/session/activity', wrapAsync(updateSessionActivity))
 
 export default router

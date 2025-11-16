@@ -1,6 +1,6 @@
 import { STATUS } from '~/constants/httpStatus'
 import { tableStatus } from '~/enums/tableStatus.enum'
-import { TableModel } from '~/models'
+import { TableModel, TableSessionModel } from '~/models'
 import { ErrorHandler } from '~/utils/response'
 
 const addTable = async (table: TableRequest) => {
@@ -189,4 +189,157 @@ const deleteTable = async (id_table: string) => {
   }
 }
 
-export default { addTable, checkAvailableTable, getAllTables, updateTable, deleteTable, leaveTable }
+// Check if table has active session
+const checkTableSession = async (table_number: number) => {
+  try {
+    const activeSession = await TableSessionModel.findOne({
+      table_number,
+      is_active: true
+    }).lean()
+
+    const response = {
+      message: activeSession ? 'Bàn đang có người sử dụng' : 'Bàn trống',
+      data: {
+        hasActiveSession: !!activeSession,
+        session: activeSession || null
+      }
+    }
+    return response
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+// Create table session when customer logs in
+const createTableSession = async (sessionData: TableSessionRequest) => {
+  try {
+    const { table_number, customer_id, customer_name, token } = sessionData
+
+    // Verify table exists and token is valid
+    const existTable = await TableModel.findOne({
+      table_number,
+      token
+    }).lean()
+
+    if (!existTable) {
+      throw new ErrorHandler(STATUS.NOT_FOUND, 'Bàn không tồn tại hoặc token không hợp lệ')
+    }
+
+    if (existTable.status === tableStatus.BOOKED) {
+      throw new ErrorHandler(STATUS.NOT_ACCEPTABLE, 'Bàn đã được đặt trước')
+    }
+
+    // Check if table already has active session
+    const activeSession = await TableSessionModel.findOne({
+      table_number,
+      is_active: true
+    }).lean()
+
+    if (activeSession) {
+      throw new ErrorHandler(
+        STATUS.NOT_ACCEPTABLE,
+        'Bàn đang có người sử dụng. Vui lòng yêu cầu nhân viên hỗ trợ nếu bạn cần trợ giúp.'
+      )
+    }
+
+    // Create new session
+    const newSession = await TableSessionModel.create({
+      table_number,
+      customer_id,
+      customer_name,
+      is_active: true,
+      logged_in_at: new Date(),
+      last_activity: new Date()
+    })
+
+    const response = {
+      message: 'Đăng nhập bàn thành công',
+      data: newSession
+    }
+    return response
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+// Unlock table session (manual by staff or auto on payment)
+const unlockTableSession = async (unlockData: TableSessionUnlockRequest) => {
+  try {
+    const { table_number, customer_id } = unlockData
+
+    const query: any = {
+      table_number,
+      is_active: true
+    }
+
+    // If customer_id provided, only unlock that specific session
+    if (customer_id) {
+      query.customer_id = customer_id
+    }
+
+    const session = await TableSessionModel.findOne(query)
+
+    if (!session) {
+      throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy phiên đang hoạt động')
+    }
+
+    session.is_active = false
+    session.logged_out_at = new Date()
+    await session.save()
+
+    const response = {
+      message: 'Mở khóa bàn thành công',
+      data: session
+    }
+    return response
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+// Update session activity (heartbeat)
+const updateSessionActivity = async (customer_id: string) => {
+  try {
+    const session = await TableSessionModel.findOneAndUpdate(
+      {
+        customer_id,
+        is_active: true
+      },
+      {
+        last_activity: new Date()
+      },
+      {
+        new: true
+      }
+    )
+
+    if (!session) {
+      throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy phiên đang hoạt động')
+    }
+
+    const response = {
+      message: 'Cập nhật hoạt động thành công',
+      data: session
+    }
+    return response
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+export default {
+  addTable,
+  checkAvailableTable,
+  getAllTables,
+  updateTable,
+  deleteTable,
+  leaveTable,
+  checkTableSession,
+  createTableSession,
+  unlockTableSession,
+  updateSessionActivity
+}
