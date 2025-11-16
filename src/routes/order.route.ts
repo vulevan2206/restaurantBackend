@@ -9,6 +9,7 @@ import {
   getUserOrder,
   updateOrder
 } from '~/controllers/order.controller'
+import { createMomoQRController } from '~/controllers/payment.controller'
 import authMiddleware from '~/middlewares/auth.middleware'
 import { wrapAsync } from '~/utils/response'
 
@@ -22,5 +23,8 @@ router.get('/statistics-order-by-table', authMiddleware.verifyAccessToken, wrapA
 router.patch('/:id', authMiddleware.verifyAccessToken, wrapAsync(updateOrder))
 router.delete('/:id', authMiddleware.verifyAccessToken, wrapAsync(deleteOrder))
 router.get('/customer', authMiddleware.verifyAccessToken, wrapAsync(findCustomer))
+router.post('/payment/momo/create-qr', createMomoQRController)
+// router.get('/payment/momo/create-qr', createMomoQRController)
+
 
 export default router
