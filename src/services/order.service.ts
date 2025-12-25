@@ -3,7 +3,7 @@ import { pick } from 'lodash'
 import { io, userSockets } from '~/app'
 import { STATUS } from '~/constants/httpStatus'
 import { orderStatus } from '~/enums/orderStatus.enum'
-import { OrderModel, ProductModel, TableModel } from '~/models'
+import { OrderModel, ProductModel, TableModel, TableSessionModel } from '~/models'
 import { ErrorHandler } from '~/utils/response'
 
 export const orderStatusName = {
@@ -243,6 +243,95 @@ const getStatisticsOrder = async (query: StatisticOrderQuery) => {
   }
 }
 
+const getStatisticsOrderByTable = async (query: StatisticOrderQuery) => {
+  try {
+    let { page = 1, limit = 3, customer_name, table_number, status, startDate, endDate } = query
+    page = Number(page)
+    limit = Number(limit)
+
+    // Build condition for filtering orders
+    const condition: any = {}
+    if (customer_name) condition.customer_name = customer_name
+    if (table_number) condition.table_number = parseInt(table_number as string)
+    if (status) condition.status = status
+    if (startDate || endDate) {
+      condition.createdAt = {}
+      if (startDate) {
+        const start = new Date(startDate)
+        start.setHours(0, 0, 0, 0)
+        condition.createdAt.$gte = start
+      }
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        condition.createdAt.$lte = end
+      }
+    }
+
+    // Aggregate orders grouped by table_number
+    const groupedOrders = await OrderModel.aggregate([
+      { $match: condition },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'product',
+          foreignField: '_id',
+          as: 'product'
+        }
+      },
+      { $unwind: '$product' },
+      {
+        $group: {
+          _id: '$table_number',
+          table_number: { $first: '$table_number' },
+          orders: { $push: '$$ROOT' },
+          cntInprogressOrder: {
+            $sum: { $cond: [{ $eq: ['$status', orderStatus.IN_PROGRESS] }, 1, 0] }
+          },
+          cntCookingOrder: {
+            $sum: { $cond: [{ $eq: ['$status', orderStatus.COOKING] }, 1, 0] }
+          },
+          cntRejectedOrder: {
+            $sum: { $cond: [{ $eq: ['$status', orderStatus.REJECTED] }, 1, 0] }
+          },
+          cntServedOrder: {
+            $sum: { $cond: [{ $eq: ['$status', orderStatus.SERVED] }, 1, 0] }
+          },
+          cntPaidOrder: {
+            $sum: { $cond: [{ $eq: ['$status', orderStatus.PAID] }, 1, 0] }
+          }
+        }
+      },
+      { $sort: { table_number: 1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit }
+    ])
+
+    // Count total tables (for pagination)
+    const totalTables = await OrderModel.distinct('table_number', condition)
+    const page_size = Math.ceil(totalTables.length / limit) || 1
+
+    const response = {
+      message: 'Lấy thống kê đơn hàng theo bàn thành công',
+      data: {
+        content: groupedOrders,
+        pagination: {
+          page,
+          limit,
+          pageSize: page_size,
+          total: totalTables.length
+        }
+      }
+    }
+
+    return response
+  } catch (error) {
+    console.error(error)
+    throw error
+  }
+}
+
+
 const updateOrder = async (order_id: string, query: OrderUpdateQuery) => {
   try {
     const { product_id, buy_count, status, assignee } = query
@@ -310,12 +399,38 @@ const updateOrder = async (order_id: string, query: OrderUpdateQuery) => {
       await ProductModel.findByIdAndUpdate(String(newProd?._id), {
         $inc: { sold: (updatedData as unknown as { buy_count: number }).buy_count }
       })
+
+      // Auto unlock table session when order is paid
+      const tableNumber = existOrder.table_number
+      if (tableNumber) {
+        await TableSessionModel.findOneAndUpdate(
+          {
+            table_number: tableNumber,
+            is_active: true
+          },
+          {
+            is_active: false,
+            logged_out_at: new Date()
+          }
+        )
+        console.log(`Auto unlocked table ${tableNumber} session after payment`)
+      }
     } else {
       if ((existOrder as unknown as { status: string }).status === orderStatus.PAID) {
         await ProductModel.findByIdAndUpdate(String(newProd?._id), {
           $inc: { sold: -1 * (updatedData as unknown as { buy_count: number }).buy_count }
         })
       }
+    }
+
+    // Emit socket event for kitchen display to update
+    if (status && existOrder.status !== status) {
+      io.emit('orderStatusUpdated', {
+        message: `Đơn hàng bàn ${existOrder.table_number} đã cập nhật trạng thái`,
+        order_id,
+        old_status: existOrder.status,
+        new_status: status
+      })
     }
 
     const response = {
@@ -385,6 +500,7 @@ export default {
   addOrder,
   getUserOrder,
   getStatisticsOrder,
+  getStatisticsOrderByTable,
   getStatisticsTable,
   updateOrder,
   deleteOrder,

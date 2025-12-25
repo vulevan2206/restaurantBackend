@@ -68,3 +68,47 @@ export const leaveTable = async (req: Request, res: Response) => {
     throw error
   }
 }
+
+export const checkTableSession = async (req: Request, res: Response) => {
+  try {
+    const { table_number } = req.query
+    const result = await tableService.checkTableSession(parseInt(table_number as string))
+    return responseSuccess(res, result)
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+export const createTableSession = async (req: Request, res: Response) => {
+  try {
+    const sessionData: TableSessionRequest = req.body
+    const result = await tableService.createTableSession(sessionData)
+    return responseSuccess(res, result)
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+export const unlockTableSession = async (req: Request, res: Response) => {
+  try {
+    const unlockData: TableSessionUnlockRequest = req.body
+    const result = await tableService.unlockTableSession(unlockData)
+    return responseSuccess(res, result)
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}
+
+export const updateSessionActivity = async (req: Request, res: Response) => {
+  try {
+    const { customer_id } = req.body
+    const result = await tableService.updateSessionActivity(customer_id as string)
+    return responseSuccess(res, result)
+  } catch (error) {
+    console.log(error)
+    throw error
+  }
+}

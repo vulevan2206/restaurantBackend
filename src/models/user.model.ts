@@ -34,7 +34,7 @@ const userSchema = new Schema(
     role: {
       type: String,
       required: true,
-      enum: [ROLE.EMPLOYEE, ROLE.ADMIN],
+      enum: [ROLE.EMPLOYEE, ROLE.ADMIN, ROLE.CHEF],
       default: ROLE.EMPLOYEE
     },
     isActive: {

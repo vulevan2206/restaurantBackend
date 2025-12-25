@@ -39,6 +39,18 @@ export const getStatisticsOrder = async (req: Request, res: Response) => {
   }
 }
 
+export const getStatisticsOrderByTable = async (req: Request, res: Response) => {
+  try {
+    const query: StatisticOrderQuery = req.query as unknown as StatisticOrderQuery
+    const result = await orderService.getStatisticsOrderByTable(query)
+    return responseSuccess(res, result)
+  } catch (error) {
+    console.error(error)
+    throw error
+  }
+}
+
+
 export const getStatisticsTable = async (req: Request, res: Response) => {
   try {
     const result = await orderService.getStatisticsTable()
