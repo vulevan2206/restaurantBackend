@@ -6,6 +6,7 @@ const env = process.env.NODE_ENV || 'development'
 dotenv.config({ path: env === 'production' ? '.env.production' : '.env' })
 import { server } from '~/app'
 import { initVectorStore } from './chatbot/vectorStore'
+import { syncProductsToVector } from './chatbot/syncVector'
 
 const port = process.env.PORT ?? 8080
 const isProduction = env === 'production'
@@ -40,13 +41,13 @@ const isProduction = env === 'production'
     // 2️⃣ INIT RAG VECTOR STORE (QUAN TRỌNG)
     console.log(warning('Initializing RAG vector store...'))
     await initVectorStore()
-    console.log(connected('RAG vector store initialized successfully!'))
-    console.log('🔥 Chatbot route loaded')
 
     mongoose.connection.on('connected', () => {
       console.log(connected('Mongoose default connection is open to MongoDB Atlas'))
     })
-
+    
+    syncProductsToVector()
+    
     mongoose.connection.on('error', (err) => {
       console.log(error(`Mongoose default connection error: ${err}`))
     })
